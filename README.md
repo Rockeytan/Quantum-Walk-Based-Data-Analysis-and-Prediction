@@ -28,7 +28,7 @@ This project uses quantum walks to analyze and predict graph-structured data. Th
 
 3. Make sure your input data and other files are placed in the correct directories as outlined below.
 
-## Usage
+## Test example
 
 ```r
 library(QWDAP)
@@ -87,13 +87,22 @@ print(all_predictions)
 # If needed, export the results to a CSV file
 write.csv(all_predictions, "predictions_all_nodes.csv", row.names = FALSE)
 ```
-## Example Visualization
 
-![Modes selection by rrelieff](Modes_selected_by_rrelieff.png)
-![Traffciflow simulated by QWDAP](Traffic_flow_simulated_by_QWDAP.png)
+## Test result Visualization
 
-This is an example of a quantum walk simulation result. 
+<p align="center">
+  <img src="Modes_selected_by_rrelieff.png" alt="Modes selection by rrelieff" width="400"/>
+  <br>
+  <em>Modes selection by rrelieff</em>
+</p>
 
+<p align="center">
+  <img src="Traffic_flow_simulated_by_QWDAP.png" alt="Traffic flow simulated by QWDAP" width="400"/>
+  <br>
+  <em>Traffic flow simulated by QWDAP</em>
+</p>
+
+This is an example of a quantum walk simulation result.
 
 ## Project Structure
 
@@ -133,5 +142,4 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgements
 
-- QWDAP package for quantum walk simulations.
-- [Other libraries/tools/resources you wish to credit]
+- QWDAP package for quantum walk simulations.  https://github.com/cran/QWDAP
