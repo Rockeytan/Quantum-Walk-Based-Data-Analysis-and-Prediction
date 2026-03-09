@@ -55,8 +55,8 @@ print(res.qwalk)
 ```
 ## Example Visualization
 
-![Modes selection by rrelieff](images/Modes selection by rrelieff.png)
-![Traffciflow simulated by QWDAP](images/Modes selection by rrelieff.png)
+![Modes selection by rrelieff]Modes selection by rrelieff.png)
+![Traffciflow simulated by QWDAP](Modes selection by rrelieff.png)
 
 This is an example of a quantum walk simulation result. 
 
