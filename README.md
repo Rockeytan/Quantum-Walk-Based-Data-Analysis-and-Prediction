@@ -28,7 +28,7 @@ This project uses quantum walks to analyze and predict graph-structured data. Th
 
 3. Make sure your input data and other files are placed in the correct directories as outlined below.
 
-## Test example
+## Usage
 
 ```r
 library(QWDAP)
@@ -88,7 +88,6 @@ print(all_predictions)
 write.csv(all_predictions, "predictions_all_nodes.csv", row.names = FALSE)
 ```
 
-## Test result Visualization
 
 <p align="center">
   <img src="Modes_selected_by_rrelieff.png" alt="Modes selection by rrelieff" width="400"/>
