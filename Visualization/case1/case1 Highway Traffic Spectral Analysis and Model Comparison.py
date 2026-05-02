@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Sat May  2 22:59:31 2026
+
+@author: user
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Nov 24 14:04:14 2025
 
 @author: tlj
@@ -35,11 +42,16 @@ path_obs   = r"data\Observed volume.csv"
 path_qw    = r"data\SGETV-QW.csv"
 path_lstm  = r"data\LSTM.csv"
 path_arima = r"data\ARIMA.csv"
+path_nhits = r"data\HITS.csv"
 
 obs   = pd.read_csv(path_obs)
 qw    = pd.read_csv(path_qw)
 lstm  = pd.read_csv(path_lstm)
 arima = pd.read_csv(path_arima)
+nhits = pd.read_csv(path_nhits)
+
+for df_tmp in [obs, qw, lstm, arima, nhits]:
+    df_tmp.columns = df_tmp.columns.str.strip()
 
 # ======================
 # 2. Select node + preprocess
@@ -51,11 +63,21 @@ y_qw    = qw[node].to_numpy(dtype=float)
 y_lstm  = lstm[node].to_numpy(dtype=float)
 y_arima = arima[node].to_numpy(dtype=float)
 
+# HITS.csv 可能是 N1 或 N1_Ori
+if node in nhits.columns:
+    y_nhits = nhits[node].to_numpy(dtype=float)
+else:
+    y_nhits = nhits[f"{node}_Ori"].to_numpy(dtype=float)
+
 fs = 144  # 10-min sampling -> 144 samples/day
 
 # align length
-n = min(len(y_obs), len(y_qw), len(y_lstm), len(y_arima))
-y_obs, y_qw, y_lstm, y_arima = y_obs[:n], y_qw[:n], y_lstm[:n], y_arima[:n]
+n = min(len(y_obs), len(y_qw), len(y_lstm), len(y_arima), len(y_nhits))
+y_obs   = y_obs[:n]
+y_qw    = y_qw[:n]
+y_lstm  = y_lstm[:n]
+y_arima = y_arima[:n]
+y_nhits = y_nhits[:n]
 
 def assert_finite(x, name):
     if not np.all(np.isfinite(x)):
@@ -66,8 +88,9 @@ assert_finite(y_obs, "Observed")
 assert_finite(y_qw, "QWDAP")
 assert_finite(y_lstm, "LSTM")
 assert_finite(y_arima, "ARIMA")
+assert_finite(y_nhits, "N-HiTS")
 
-df = fs / n  # frequency resolution (cycles/day), for 720 -> 0.2
+df = fs / n
 
 # ======================
 # 3. RAW PSD
@@ -76,15 +99,20 @@ f,  P_obs   = periodogram(y_obs,   fs=fs, scaling="density")
 _,  P_qw    = periodogram(y_qw,    fs=fs, scaling="density")
 _,  P_lstm  = periodogram(y_lstm,  fs=fs, scaling="density")
 _,  P_arima = periodogram(y_arima, fs=fs, scaling="density")
+_,  P_nhits = periodogram(y_nhits, fs=fs, scaling="density")
 
 mask = f > 0
 f = f[mask]
-P_obs, P_qw, P_lstm, P_arima = P_obs[mask], P_qw[mask], P_lstm[mask], P_arima[mask]
+P_obs   = P_obs[mask]
+P_qw    = P_qw[mask]
+P_lstm  = P_lstm[mask]
+P_arima = P_arima[mask]
+P_nhits = P_nhits[mask]
 
 xmin = float(f.min()) * 0.95
 
 # ======================
-# 4. Peak-aligned vertical lines (only for interpretable bands)
+# 4. Peak-aligned vertical lines
 # ======================
 def half_width_for_target(f0, df):
     if np.isclose(f0, 1.0):
@@ -110,13 +138,11 @@ def prominent_gate(P, band_idx, peak_idx, ratio_thr=1.6):
         return True
     return (pk / med) >= ratio_thr
 
-# label ONLY period (simple)
 targets = [
     ("24h", 1.0, "#1f77b4"),
     ("12h", 2.0, "#ff7f0e"),
     ("8h",  3.0, "#2ca02c"),
     ("6h",  4.0, "#d62728"),
-    # ("4h",  6.0, "#9467bd"),
 ]
 
 marks = []
@@ -125,12 +151,13 @@ for lab, f0, c in targets:
     out = local_peak_near(f, P_obs, f0, hw)
     if out is None:
         continue
+
     fx, px, band_idx = out
     peak_idx = int(np.argmin(np.abs(f - fx)))
 
-    # reject if drift too far (avoid forcing)
     if abs(fx - f0) > 0.95 * hw:
         continue
+
     if not prominent_gate(P_obs, band_idx, peak_idx, ratio_thr=1.6):
         continue
 
@@ -145,39 +172,50 @@ ax.plot(f, P_obs,   color="black",   linewidth=2.2, label="Original")
 ax.plot(f, P_qw,    color="#0052cc", linewidth=1.8, label="QWDAP")
 ax.plot(f, P_arima, color="#d62728", linestyle="--", linewidth=1.8, label="ARIMA")
 ax.plot(f, P_lstm,  color="#2ca02c", linestyle=":",  linewidth=2.2, label="LSTM")
+ax.plot(f, P_nhits, color="#9467bd", linestyle="-.", linewidth=2.0, label="N-HiTS")
 
-# ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlim(0.5, 5)
 ax.set_ylim(0.1)
-
 
 ax.set_xlabel("Frequency (cycles per day)")
 ax.set_ylabel("log(PSD)")
 ax.set_title(f"Power Spectral Density — {node}", pad=18)
 
-# ax.grid(True, which="both", linestyle="--", alpha=0.3)
-
 # ======================
-# 6. Vertical lines + CLEAN labels (fixed y in axes coords)
-#    Use axis transform so text stays inside and does not overlap the title.
+# 6. Vertical lines + labels
 # ======================
-# Text y-positions (axes fraction). Slightly staggered to avoid overlaps.
 y_levels = [0.90, 0.82, 0.74, 0.66, 0.58]
-
-# Sort by frequency (left to right) for cleaner staggering
 marks = sorted(marks, key=lambda x: x[1])
 
 for i, (lab, fx, c) in enumerate(marks):
-    ax.axvline(x=fx, color=c, linestyle="--", linewidth=1.6, alpha=0.85, zorder=0)
+    ax.axvline(
+        x=fx,
+        color=c,
+        linestyle="--",
+        linewidth=1.6,
+        alpha=0.85,
+        zorder=0
+    )
 
     y_ax = y_levels[i] if i < len(y_levels) else 0.58
+
     ax.text(
-        fx, y_ax, lab,
-        transform=ax.get_xaxis_transform(),  # x in data coords, y in axes coords (0..1)
-        ha="center", va="bottom",
-        fontsize=22, color=c, fontweight="bold",
-        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="none", alpha=0.75)
+        fx,
+        y_ax,
+        lab,
+        transform=ax.get_xaxis_transform(),
+        ha="center",
+        va="bottom",
+        fontsize=22,
+        color=c,
+        fontweight="bold",
+        bbox=dict(
+            boxstyle="round,pad=0.15",
+            facecolor="white",
+            edgecolor="none",
+            alpha=0.75
+        )
     )
 
 ax.legend(loc="best")
