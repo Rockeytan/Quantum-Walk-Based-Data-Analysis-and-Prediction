@@ -56,6 +56,16 @@ data = {
         0.9480,0.7798,0.9448,0.9304,0.9465,0.9611,0.9468,0.8646,0.9378,0.6759,
         0.9343,0.8970,0.9293,0.9471,0.9043,0.9335,0.9290,0.8833,0.9392,0.9222,
         0.9048,0.9490,0.9102,0.8734,0.9456,0.8654
+    ],
+    "N-HiTS": [
+    0.938873, 0.968323, 0.972326, 0.973841, 0.959410, 0.955084, 0.936500,
+    0.940576, 0.959103, 0.966767, 0.967694, 0.969327, 0.966054, 0.958487,
+    0.956992, 0.952003, 0.959771, 0.965261, 0.950885, 0.960688, 0.957998,
+    0.966162, 0.958111, 0.895217, 0.965910, 0.951287, 0.895859, 0.961207,
+    0.956287, 0.956743, 0.950344, 0.824910, 0.957236, 0.921907, 0.939156,
+    0.957624, 0.942219, 0.876966, 0.939968, 0.689693, 0.940009, 0.906244,
+    0.934809, 0.948303, 0.899378, 0.944736, 0.945469, 0.895579, 0.943046,
+    0.931793, 0.917178, 0.960286, 0.930589, 0.905528, 0.948719, 0.884463
     ]
 }
 
@@ -71,8 +81,14 @@ import matplotlib.pyplot as plt
 # -------------------------
 df = pd.DataFrame(data)
 
-models = ["QWDAP", "ARIMA", "LSTM"]
-colors = ["#1f77b4", "#d62728", "#2ca02c"]
+models = ["QWDAP", "ARIMA", "LSTM", "N-HiTS"]
+
+colors = [
+    "#1f77b4",  # QWDAP
+    "#d62728",  # ARIMA
+    "#2ca02c",  # LSTM
+    "#9467bd"   # N-HiTS
+]
 
 avg = df[models].mean()
 std = df[models].std()
@@ -87,55 +103,57 @@ plt.rcParams.update({
     "ytick.major.width": 1.5,
     "xtick.major.size": 6,
     "ytick.major.size": 6,
+    "axes.labelsize": 20,
+    "xtick.labelsize": 17,
+    "ytick.labelsize": 17,
     "figure.dpi": 500
 })
 
-fig, ax = plt.subplots(figsize=(5, 5))
+fig, ax = plt.subplots(figsize=(6.2, 5))
 
 # -------------------------
-# 3. 设置柱子位置（拉大间距）
+# 3. 柱状图
 # -------------------------
-x = np.array([0, 1.5, 3.0])   # ← 原本是 [0,1,2]，现在加大间隔
-bar_width = 0.35              # ← 稍微变细
+x = np.arange(len(models)) * 1.25
+bar_width = 0.38
 
 bars = ax.bar(
     x,
-    avg,
+    avg.values,
     width=bar_width,
-    yerr=std,
+    yerr=std.values,
     capsize=5,
     color=colors,
-    edgecolor='black',
+    edgecolor="black",
     linewidth=1.2
 )
 
 # -------------------------
-# 4. 在柱子上方添加数值
+# 4. 添加平均值
 # -------------------------
-# for xi, v in zip(x, avg):
-#     ax.text(
-#         xi,
-#         v + 0.005,
-#         f"{v:.4f}",
-#         ha="center",
-#         va="bottom",
-#         fontsize=14,
-#         fontweight="bold"
-#     )
+for xi, v in zip(x, avg.values):
+    ax.text(
+        xi,
+        v + 0.006,
+        f"{v:.3f}",
+        ha="center",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold"
+    )
 
 # -------------------------
 # 5. 坐标轴
 # -------------------------
-ax.yaxis.set_major_formatter(plt.FormatStrFormatter('%.2f'))
-ax.set_ylim(0.8, 1)
+ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.2f"))
+ax.set_ylim(0.80, 1.01)
 ax.set_ylabel("Average R² Value")
-# ax.set_title("Highest & Most Consistent", pad=10)
 
-# 设置 x 轴标签位置（与柱子对齐）
 ax.set_xticks(x)
 ax.set_xticklabels(models)
 
-ax.tick_params(axis='both')
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
 
 plt.tight_layout()
 plt.show()
